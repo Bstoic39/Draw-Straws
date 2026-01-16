@@ -25,11 +25,6 @@
         </div>
       </div>
 
-      <button class="iconBtn" id="openSettingsBtn" aria-label="Open settings" title="Settings">
-        ⚙️
-      </button>
-    </header>
-
     <main class="main">
       <!-- HOME -->
       <section class="screen active" id="screenHome" aria-label="Home">
@@ -154,62 +149,6 @@
         <div class="footerNote muted" id="tensionNote"></div>
       </section>
     </main>
-
-    <!-- SETTINGS MODAL -->
-    <div class="modalBackdrop" id="settingsBackdrop" hidden>
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-        <div class="rowBetween">
-          <h2 id="settingsTitle">Settings</h2>
-          <button class="iconBtn" id="closeSettingsBtn" aria-label="Close settings">✖️</button>
-        </div>
-
-        <div class="setting">
-          <div>
-            <div class="settingTitle">Extra chaos</div>
-            <div class="muted">Darker vibes, more dramatic reveals.</div>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="unhingedToggle" />
-            <span class="slider"></span>
-          </label>
-        </div>
-
-        <div class="setting">
-          <div>
-            <div class="settingTitle">“Pass the phone” prompt</div>
-            <div class="muted">Stops one person from flipping everything.</div>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="passPhoneToggle" checked />
-            <span class="slider"></span>
-          </label>
-        </div>
-
-        <div class="setting">
-          <div>
-            <div class="settingTitle">Sound</div>
-            <div class="muted">Flip noises + winner/loser vibes.</div>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="soundToggle" />
-            <span class="slider"></span>
-          </label>
-        </div>
-
-        <p class="tiny muted" style="margin-top:14px">
-          Reminder: keep it fun, not cruel.
-        </p>
-      </div>
-    </div>
-
-    <!-- PASS THE PHONE OVERLAY -->
-    <div class="overlay" id="passOverlay" hidden>
-      <div class="overlayCard">
-        <div class="overlayTitle">Pass the phone 📱</div>
-        <div class="overlayText">No hogging. Next player taps <b>Next</b>.</div>
-        <button class="primaryBtn" id="nextPlayerBtn">Next</button>
-      </div>
-    </div>
 
     <!-- TOAST -->
     <div class="toast" id="toast" hidden></div>
