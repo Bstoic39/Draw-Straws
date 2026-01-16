@@ -1,4 +1,4 @@
-/* Schoolyard Shuffle - static PWA, teen-voice, three modes, smooth overlays */
+/* Schoolyard Shuffle - static PWA, teen-voice, three modes, smooth overlays (full file) */
 
 const $ = (id) => document.getElementById(id);
 
@@ -38,7 +38,7 @@ const ui = {
   settingsBackdrop: $("settingsBackdrop"),
   openSettingsBtn: $("openSettingsBtn"),
   closeSettingsBtn: $("closeSettingsBtn"),
-  unhingedToggle: $("unhingedToggle"), // UI label might say "Extra chaos" now—id stays the same
+  unhingedToggle: $("unhingedToggle"), // label in UI may say "Extra chaos"
   passPhoneToggle: $("passPhoneToggle"),
   soundToggle: $("soundToggle"),
 
@@ -137,11 +137,12 @@ const state = {
 /* ------------------------------ helpers ------------------------------ */
 
 function showScreen(name) {
-  Object.values(screens).forEach((s) => s.classList.remove("active"));
-  screens[name].classList.add("active");
+  Object.values(screens).forEach((s) => s && s.classList.remove("active"));
+  if (screens[name]) screens[name].classList.add("active");
 }
 
 function toast(msg) {
+  if (!ui.toast) return;
   ui.toast.textContent = msg;
   ui.toast.hidden = false;
   clearTimeout(toast._t);
@@ -165,7 +166,7 @@ function shuffle(arr) {
 
 function modeLabel(mode) {
   const meta = MODE_META[mode];
-  return `${meta.emoji} ${meta.title}`;
+  return meta ? `${meta.emoji} ${meta.title}` : "Mode";
 }
 
 function escapeHtml(s) {
@@ -181,9 +182,11 @@ function escapeHtml(s) {
 
 function setTheme() {
   document.body.classList.toggle("unhinged", state.settings.unhinged);
-  ui.subtitle.textContent = state.settings.unhinged
-    ? "Random. Fair. Extra chaos."
-    : "Settle it with tiles.";
+  if (ui.subtitle) {
+    ui.subtitle.textContent = state.settings.unhinged
+      ? "Random. Fair. Extra chaos."
+      : "Settle it with tiles.";
+  }
 }
 
 function saveSettings() {
@@ -204,49 +207,65 @@ function loadSettings() {
 }
 
 function syncSettingsUI() {
-  ui.unhingedToggle.checked = state.settings.unhinged;
-  ui.passPhoneToggle.checked = state.settings.passPhone;
-  ui.soundToggle.checked = state.settings.sound;
+  if (ui.unhingedToggle) ui.unhingedToggle.checked = state.settings.unhinged;
+  if (ui.passPhoneToggle) ui.passPhoneToggle.checked = state.settings.passPhone;
+  if (ui.soundToggle) ui.soundToggle.checked = state.settings.sound;
   setTheme();
 }
 
 /* ------------------------------ overlays (smooth + reliable) ------------------------------ */
 
 function openPassOverlay() {
-  // Don’t open if disabled or already open
   if (!state.settings.passPhone) return;
   if (state.overlay.passOpen) return;
-
-  // Prevent "close then instantly re-open" due to rapid taps/cached events
   if (Date.now() < state.overlay.suppressUntil) return;
 
   state.overlay.passOpen = true;
 
+  if (!ui.passOverlay) return;
   ui.passOverlay.hidden = false;
   ui.passOverlay.style.display = "grid"; // ensure visible
 }
 
 function closePassOverlay() {
   state.overlay.passOpen = false;
-  state.overlay.suppressUntil = Date.now() + 250; // small debounce window
+  state.overlay.suppressUntil = Date.now() + 250;
 
-  // Hide in the most compatible way: attribute + display
+  if (!ui.passOverlay) return;
   ui.passOverlay.hidden = true;
   ui.passOverlay.style.display = "none";
+}
+
+function openSettings() {
+  if (!ui.settingsBackdrop) return;
+  ui.settingsBackdrop.hidden = false;
+  ui.settingsBackdrop.style.display = "grid";
+}
+
+function closeSettings() {
+  if (!ui.settingsBackdrop) return;
+  ui.settingsBackdrop.hidden = true;
+  ui.settingsBackdrop.style.display = "none";
+  requestAnimationFrame(() => {
+    // restore default CSS behavior for next open
+    ui.settingsBackdrop.style.display = "";
+  });
 }
 
 /* ------------------------------ tiles/game logic ------------------------------ */
 
 function setupScreenForMode(mode) {
   const meta = MODE_META[mode];
-  ui.setupTitle.textContent = meta.setupTitle;
-  ui.setupDesc.textContent = meta.setupDesc;
-  ui.participantsLabel.textContent = meta.participantsLabel;
+  if (!meta) return;
 
-  ui.teamsField.hidden = !meta.needsTeams;
+  if (ui.setupTitle) ui.setupTitle.textContent = meta.setupTitle;
+  if (ui.setupDesc) ui.setupDesc.textContent = meta.setupDesc;
+  if (ui.participantsLabel) ui.participantsLabel.textContent = meta.participantsLabel;
 
-  ui.participantsInput.value = String(state.participants || 10);
-  if (mode === "teams") ui.teamsInput.value = String(state.teams || 2);
+  if (ui.teamsField) ui.teamsField.hidden = !meta.needsTeams;
+
+  if (ui.participantsInput) ui.participantsInput.value = String(state.participants || 10);
+  if (mode === "teams" && ui.teamsInput) ui.teamsInput.value = String(state.teams || 2);
 }
 
 function buildTiles() {
@@ -332,7 +351,6 @@ function revealTextFor(tile) {
     };
   }
 
-  // winner mode
   if (tile.kind === "winner") {
     return {
       top: "👑 WINNER",
@@ -342,6 +360,7 @@ function revealTextFor(tile) {
       accent: "#facc15",
     };
   }
+
   return {
     top: "😎 NOT YOU",
     sub: unhinged ? "Better luck. Don’t rage quit." : "Try again.",
@@ -352,7 +371,10 @@ function revealTextFor(tile) {
 function playSound(type) {
   if (!state.settings.sound) return;
 
-  const ctx = playSound._ctx || (playSound._ctx = new (window.AudioContext || window.webkitAudioContext)());
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return;
+
+  const ctx = playSound._ctx || (playSound._ctx = new AudioCtx());
   const o = ctx.createOscillator();
   const g = ctx.createGain();
 
@@ -379,10 +401,13 @@ function playSound(type) {
 }
 
 function maybeShowTensionNote() {
+  if (!ui.tensionNote) return;
+
   if (!state.settings.unhinged) {
     ui.tensionNote.textContent = "";
     return;
   }
+
   const remaining = state.tiles.length - state.revealedCount;
   if (remaining === 2) ui.tensionNote.textContent = "It’s about to be personal.";
   else if (remaining === 1) ui.tensionNote.textContent = "One tile left. Everyone breathe.";
@@ -390,27 +415,31 @@ function maybeShowTensionNote() {
 }
 
 function updateGameHeader() {
-  ui.modePill.textContent = modeLabel(state.mode);
-  ui.countPill.textContent = `${state.revealedCount} / ${state.tiles.length} flipped`;
+  if (ui.modePill) ui.modePill.textContent = modeLabel(state.mode);
+  if (ui.countPill) ui.countPill.textContent = `${state.revealedCount} / ${state.tiles.length} flipped`;
 
-  ui.gameTitle.textContent = MODE_META[state.mode].title;
+  const meta = MODE_META[state.mode];
+  if (ui.gameTitle && meta) ui.gameTitle.textContent = meta.title;
 
-  if (state.mode === "teams") {
-    ui.gameSub.textContent = state.settings.unhinged
-      ? "Flip a tile. Accept your destiny."
-      : "Flip a tile to find your team.";
-  } else if (state.mode === "loser") {
-    ui.gameSub.textContent = state.settings.unhinged ? "Flip & suffer." : "Flip until someone takes the L.";
-  } else {
-    ui.gameSub.textContent = state.settings.unhinged
-      ? "Flip until the prophecy is fulfilled."
-      : "Flip until someone gets the W.";
+  if (ui.gameSub) {
+    if (state.mode === "teams") {
+      ui.gameSub.textContent = state.settings.unhinged
+        ? "Flip a tile. Accept your destiny."
+        : "Flip a tile to find your team.";
+    } else if (state.mode === "loser") {
+      ui.gameSub.textContent = state.settings.unhinged ? "Flip & suffer." : "Flip until someone takes the L.";
+    } else {
+      ui.gameSub.textContent = state.settings.unhinged
+        ? "Flip until the prophecy is fulfilled."
+        : "Flip until someone gets the W.";
+    }
   }
 
   maybeShowTensionNote();
 }
 
 function renderBoard() {
+  if (!ui.board) return;
   ui.board.innerHTML = "";
 
   state.tiles.forEach((tile, idx) => {
@@ -449,7 +478,6 @@ function applyReveal(tileEl, tile) {
 }
 
 function onBoardClick(e) {
-  // If pass overlay is open, block tile flips entirely
   if (state.overlay.passOpen) return;
 
   const btn = e.target.closest(".tile");
@@ -459,18 +487,16 @@ function onBoardClick(e) {
   const tile = state.tiles[idx];
   if (!tile || tile.revealed) return;
 
-  // Reveal
   tile.revealed = true;
   state.revealedCount += 1;
+
   applyReveal(btn, tile);
   updateGameHeader();
 
-  // Show pass overlay after each reveal (except last tile)
   if (state.settings.passPhone && state.revealedCount < state.tiles.length) {
     openPassOverlay();
   }
 
-  // Toasts
   if (state.mode === "loser" && tile.kind === "loser") {
     toast(state.settings.unhinged ? "CERTIFIED L. RIP." : "Certified L.");
   }
@@ -480,11 +506,11 @@ function onBoardClick(e) {
 }
 
 function applySetupForm() {
-  const p = clampInt(ui.participantsInput.value, 2, 200, 10);
+  const p = clampInt(ui.participantsInput?.value, 2, 200, 10);
   state.participants = p;
 
   if (state.mode === "teams") {
-    const t = clampInt(ui.teamsInput.value, 2, 20, 2);
+    const t = clampInt(ui.teamsInput?.value, 2, 20, 2);
     state.teams = Math.min(t, p);
   }
 }
@@ -496,7 +522,7 @@ function startSetup(mode) {
 }
 
 function startGameFromSetup() {
-  closePassOverlay(); // ensure no overlay leaks between screens
+  closePassOverlay();
   buildTiles();
   updateGameHeader();
   renderBoard();
@@ -513,24 +539,15 @@ function runItBack() {
 
 function randomizeNumbers() {
   const p = clampInt(Math.floor(6 + Math.random() * 25), 2, 200, 10);
-  ui.participantsInput.value = String(p);
+  if (ui.participantsInput) ui.participantsInput.value = String(p);
 
-  if (state.mode === "teams") {
+  if (state.mode === "teams" && ui.teamsInput) {
     const maxTeams = Math.min(6, Math.max(2, Math.floor(p / 2)));
     const t = clampInt(2 + Math.floor(Math.random() * (maxTeams - 1)), 2, 20, 2);
     ui.teamsInput.value = String(t);
   }
 
   toast("Numbers shuffled.");
-}
-
-/* ------------------------------ settings modal ------------------------------ */
-
-function openSettings() {
-  ui.settingsBackdrop.hidden = false;
-}
-function closeSettings() {
-  ui.settingsBackdrop.hidden = true;
 }
 
 /* ------------------------------ PWA ------------------------------ */
@@ -545,12 +562,12 @@ function initPwa() {
   let deferredPrompt = null;
   window.addEventListener("beforeinstallprompt", (e) => {
     deferredPrompt = e;
-    ui.pwaStatus.textContent = "📲 Installable PWA (tap ⋮ → Add to Home screen)";
+    if (ui.pwaStatus) ui.pwaStatus.textContent = "📲 Installable PWA (tap ⋮ → Add to Home screen)";
   });
 
   setTimeout(() => {
     if (!deferredPrompt) {
-      ui.pwaStatus.textContent = "📱 Add to Home Screen for the “app” vibe";
+      if (ui.pwaStatus) ui.pwaStatus.textContent = "📱 Add to Home Screen for the “app” vibe";
     }
   }, 1200);
 }
@@ -559,83 +576,106 @@ function initPwa() {
 
 function wireEvents() {
   // Home mode selection
-  screens.home.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-mode]");
-    if (!btn) return;
-    startSetup(btn.dataset.mode);
-  });
+  if (screens.home) {
+    screens.home.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-mode]");
+      if (!btn) return;
+      startSetup(btn.dataset.mode);
+    });
+  }
 
   // Setup nav
-  ui.backHomeBtn.addEventListener("click", () => {
-    closePassOverlay();
-    showScreen("home");
-  });
+  if (ui.backHomeBtn) {
+    ui.backHomeBtn.addEventListener("click", () => {
+      closePassOverlay();
+      showScreen("home");
+    });
+  }
 
-  ui.randomizeBtn.addEventListener("click", randomizeNumbers);
+  if (ui.randomizeBtn) ui.randomizeBtn.addEventListener("click", randomizeNumbers);
 
-  ui.setupForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    applySetupForm();
-    startGameFromSetup();
-  });
+  if (ui.setupForm) {
+    ui.setupForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      applySetupForm();
+      startGameFromSetup();
+    });
+  }
 
   // Game nav
-  ui.backSetupBtn.addEventListener("click", () => {
-    closePassOverlay();
-    showScreen("setup");
-  });
+  if (ui.backSetupBtn) {
+    ui.backSetupBtn.addEventListener("click", () => {
+      closePassOverlay();
+      showScreen("setup");
+    });
+  }
 
-  ui.newSetupBtn.addEventListener("click", () => {
-    closePassOverlay();
-    showScreen("setup");
-  });
+  if (ui.newSetupBtn) {
+    ui.newSetupBtn.addEventListener("click", () => {
+      closePassOverlay();
+      showScreen("setup");
+    });
+  }
 
-  ui.playAgainBtn.addEventListener("click", runItBack);
+  if (ui.playAgainBtn) ui.playAgainBtn.addEventListener("click", runItBack);
 
-  // Board click (single handler, stable)
-  ui.board.addEventListener("click", onBoardClick);
+  // Board click
+  if (ui.board) ui.board.addEventListener("click", onBoardClick);
 
-  // Settings modal
-  ui.openSettingsBtn.addEventListener("click", openSettings);
-  ui.closeSettingsBtn.addEventListener("click", closeSettings);
-  ui.settingsBackdrop.addEventListener("click", (e) => {
-    if (e.target === ui.settingsBackdrop) closeSettings();
-  });
+  // Settings modal open/close
+  if (ui.openSettingsBtn) ui.openSettingsBtn.addEventListener("click", openSettings);
+  if (ui.closeSettingsBtn) ui.closeSettingsBtn.addEventListener("click", closeSettings);
 
-  ui.passPhoneToggle.addEventListener("change", () => {
-    state.settings.passPhone = ui.passPhoneToggle.checked;
-    saveSettings();
-    if (!state.settings.passPhone) closePassOverlay();
-  });
+  // Click outside modal closes it
+  if (ui.settingsBackdrop) {
+    ui.settingsBackdrop.addEventListener("click", (e) => {
+      if (e.target === ui.settingsBackdrop) closeSettings();
+    });
+  }
 
-  ui.soundToggle.addEventListener("change", () => {
-    state.settings.sound = ui.soundToggle.checked;
-    saveSettings();
-    toast(state.settings.sound ? "Sound on." : "Sound off.");
-  });
+  // Toggles
+  if (ui.passPhoneToggle) {
+    ui.passPhoneToggle.addEventListener("change", () => {
+      state.settings.passPhone = ui.passPhoneToggle.checked;
+      saveSettings();
+      if (!state.settings.passPhone) closePassOverlay();
+    });
+  }
 
-  // Direct toggle, no confirmation, no overlay
-  ui.unhingedToggle.addEventListener("change", () => {
-    state.settings.unhinged = ui.unhingedToggle.checked;
-    setTheme();
-    saveSettings();
-    toast(state.settings.unhinged ? "Extra chaos: ON 😈" : "Extra chaos: OFF 😇");
-    updateGameHeader(); // if already in game, update text/tension note
-  });
+  if (ui.soundToggle) {
+    ui.soundToggle.addEventListener("change", () => {
+      state.settings.sound = ui.soundToggle.checked;
+      saveSettings();
+      toast(state.settings.sound ? "Sound on." : "Sound off.");
+    });
+  }
 
-  // Pass overlay close: button
-  ui.nextPlayerBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    closePassOverlay();
-  });
+  if (ui.unhingedToggle) {
+    ui.unhingedToggle.addEventListener("change", () => {
+      state.settings.unhinged = ui.unhingedToggle.checked;
+      setTheme();
+      saveSettings();
+      toast(state.settings.unhinged ? "Extra chaos: ON 😈" : "Extra chaos: OFF 😇");
+      updateGameHeader();
+    });
+  }
 
-  // Pass overlay close: tap outside the card
-  ui.passOverlay.addEventListener("click", (e) => {
-    if (e.target === ui.passOverlay) closePassOverlay();
-  });
+  // Pass overlay close
+  if (ui.nextPlayerBtn) {
+    ui.nextPlayerBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closePassOverlay();
+    });
+  }
 
-  // Safety: close overlay on escape
+  if (ui.passOverlay) {
+    ui.passOverlay.addEventListener("click", (e) => {
+      if (e.target === ui.passOverlay) closePassOverlay();
+    });
+  }
+
+  // Escape closes overlays
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       closeSettings();
@@ -651,7 +691,7 @@ function init() {
   syncSettingsUI();
   initPwa();
   wireEvents();
-  closePassOverlay(); // enforce clean start state
+  closePassOverlay();
   showScreen("home");
 }
 
