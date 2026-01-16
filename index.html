@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+
+  <title>Schoolyard Shuffle</title>
+  <meta name="description" content="Pick teams, pick a winner, pick a loser. Random tiles. Less arguing." />
+
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./icons/icon.svg" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+  <div class="app" id="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">🧩</div>
+        <div>
+          <div class="title">Schoolyard Shuffle</div>
+          <div class="subtitle" id="subtitle">Settle it with tiles.</div>
+        </div>
+      </div>
+
+      <button class="iconBtn" id="openSettingsBtn" aria-label="Open settings" title="Settings">
+        ⚙️
+      </button>
+    </header>
+
+    <main class="main">
+      <!-- HOME -->
+      <section class="screen active" id="screenHome" aria-label="Home">
+        <div class="card">
+          <h1>Choose your chaos</h1>
+          <p class="muted">Random. Fair. Slightly disrespectful.</p>
+
+          <div class="gridButtons">
+            <button class="bigBtn" data-mode="teams">
+              <span class="bigEmoji">🎨</span>
+              <span>
+                <span class="bigLabel">Pick Teams</span>
+                <span class="bigHint">Schoolyard classic</span>
+              </span>
+            </button>
+
+            <button class="bigBtn" data-mode="loser">
+              <span class="bigEmoji">💩</span>
+              <span>
+                <span class="bigLabel">Pick a Loser</span>
+                <span class="bigHint">Draw straws, but louder</span>
+              </span>
+            </button>
+
+            <button class="bigBtn" data-mode="winner">
+              <span class="bigEmoji">👑</span>
+              <span>
+                <span class="bigLabel">Pick a Winner</span>
+                <span class="bigHint">Main character moment</span>
+              </span>
+            </button>
+          </div>
+
+          <div class="miniRow">
+            <span class="pill" id="pwaStatus">📱 Installable PWA (most Android browsers)</span>
+            <span class="pill">🔀 Truly random</span>
+          </div>
+        </div>
+
+        <div class="footerNote muted">
+          Tip: Add to Home Screen for the full “app” vibe.
+        </div>
+      </section>
+
+      <!-- SETUP -->
+      <section class="screen" id="screenSetup" aria-label="Setup">
+        <div class="card">
+          <div class="rowBetween">
+            <h1 id="setupTitle">Setup</h1>
+            <button class="textBtn" id="backHomeBtn">← Home</button>
+          </div>
+
+          <p class="muted" id="setupDesc">Tell me how many humans are involved.</p>
+
+          <form id="setupForm" class="form">
+            <label class="field">
+              <span class="labelText" id="participantsLabel">Participants</span>
+              <input
+                id="participantsInput"
+                type="number"
+                inputmode="numeric"
+                min="2"
+                max="200"
+                value="10"
+                required
+              />
+              <span class="help">Min 2. Max 200 (because… calm down).</span>
+            </label>
+
+            <label class="field" id="teamsField" hidden>
+              <span class="labelText">Teams</span>
+              <input
+                id="teamsInput"
+                type="number"
+                inputmode="numeric"
+                min="2"
+                max="20"
+                value="2"
+              />
+              <span class="help">Auto-balances if it doesn’t divide evenly.</span>
+            </label>
+
+            <div class="actions">
+              <button class="primaryBtn" type="submit">Generate Tiles</button>
+              <button class="ghostBtn" type="button" id="randomizeBtn">🎲 Randomize numbers</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="footerNote muted" id="unhingedNote" hidden>
+          Unhinged Mode is on. The tiles are feeling judgmental.
+        </div>
+      </section>
+
+      <!-- GAME -->
+      <section class="screen" id="screenGame" aria-label="Game">
+        <div class="card">
+          <div class="rowBetween">
+            <div>
+              <h1 id="gameTitle">Flip time</h1>
+              <p class="muted" id="gameSub">No peeking. That’s cringe.</p>
+            </div>
+
+            <button class="textBtn" id="backSetupBtn">← Setup</button>
+          </div>
+
+          <div class="statusBar" id="statusBar">
+            <span class="pill" id="modePill">Mode</span>
+            <span class="pill" id="countPill">0 / 0</span>
+          </div>
+
+          <div class="boardWrap">
+            <div class="board" id="board" aria-label="Tile board"></div>
+          </div>
+
+          <div class="controls">
+            <button class="primaryBtn" id="playAgainBtn">Run it back 🔄</button>
+            <button class="ghostBtn" id="newSetupBtn">New setup</button>
+          </div>
+        </div>
+
+        <div class="footerNote muted" id="tensionNote"></div>
+      </section>
+    </main>
+
+    <!-- SETTINGS MODAL -->
+    <div class="modalBackdrop" id="settingsBackdrop" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="rowBetween">
+          <h2 id="settingsTitle">Settings</h2>
+          <button class="iconBtn" id="closeSettingsBtn" aria-label="Close settings">✖️</button>
+        </div>
+
+        <div class="setting">
+          <div>
+            <div class="settingTitle">Unhinged Mode</div>
+            <div class="muted">Extra chaos. Extra disrespect. Opt-in only.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="unhingedToggle" />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting">
+          <div>
+            <div class="settingTitle">“Pass the phone” prompt</div>
+            <div class="muted">Stops one person from flipping everything.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="passPhoneToggle" checked />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting">
+          <div>
+            <div class="settingTitle">Sound</div>
+            <div class="muted">Flip noises + winner/loser vibes.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="soundToggle" />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="divider"></div>
+
+        <button class="dangerBtn" id="openUnhingedConfirmBtn">
+          Turn on Unhinged Mode 😈
+        </button>
+
+        <p class="tiny muted">
+          Reminder: keep it fun, not cruel. Random tiles don’t excuse being a villain.
+        </p>
+      </div>
+    </div>
+
+    <!-- PASS THE PHONE OVERLAY -->
+    <div class="overlay" id="passOverlay" hidden>
+      <div class="overlayCard">
+        <div class="overlayTitle">Pass the phone 📱</div>
+        <div class="overlayText">No hogging. Next player taps <b>Next</b>.</div>
+        <button class="primaryBtn" id="nextPlayerBtn">Next</button>
+      </div>
+    </div>
+
+    <!-- UNHINGED CONFIRM OVERLAY -->
+    <div class="overlay" id="unhingedOverlay" hidden>
+      <div class="overlayCard">
+        <div class="overlayTitle">⚠️ UNHINGED MODE</div>
+        <div class="overlayText">
+          Extra chaos. Extra disrespect.<br/>
+          Turn on only if everyone agrees.
+        </div>
+        <div class="overlayActions">
+          <button class="dangerBtn" id="acceptUnhingedBtn">I accept the chaos</button>
+          <button class="ghostBtn" id="declineUnhingedBtn">Nope</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast" hidden></div>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
