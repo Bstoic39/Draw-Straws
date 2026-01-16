@@ -1,0 +1,311 @@
+:root{
+  --bg: #0f0f12;
+  --card: #16161c;
+  --text: #f2f2f2;
+  --muted: #b7b7c2;
+  --border: rgba(255,255,255,.09);
+  --shadow: 0 10px 30px rgba(0,0,0,.45);
+
+  --accent: #7c5cff;
+  --accent2: #2dd4bf;
+
+  --danger: #ff3b6b;
+  --ok: #44d07b;
+
+  --tile: #1d1d25;
+  --tile2: #232331;
+
+  --radius: 18px;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  background: radial-gradient(1200px 800px at 20% 0%, rgba(124,92,255,.20), transparent 60%),
+              radial-gradient(1200px 800px at 90% 10%, rgba(45,212,191,.14), transparent 60%),
+              var(--bg);
+  color: var(--text);
+}
+
+.app{min-height:100%; display:flex; flex-direction:column}
+
+.topbar{
+  position:sticky; top:0; z-index:10;
+  display:flex; justify-content:space-between; align-items:center;
+  padding:14px 16px;
+  background: rgba(15,15,18,.75);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand{display:flex; gap:12px; align-items:center}
+.logo{
+  width:44px; height:44px; border-radius:14px;
+  display:grid; place-items:center;
+  background: linear-gradient(135deg, rgba(124,92,255,.35), rgba(45,212,191,.18));
+  border:1px solid var(--border);
+}
+.title{font-weight:800; letter-spacing:.2px}
+.subtitle{font-size:12px; color: var(--muted)}
+
+.main{flex:1; padding:16px; max-width:900px; width:100%; margin:0 auto}
+.screen{display:none}
+.screen.active{display:block}
+
+.card{
+  background: linear-gradient(180deg, rgba(255,255,255,.03), transparent 80%), var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding:16px;
+  box-shadow: var(--shadow);
+}
+
+h1{margin:0 0 6px 0; font-size:22px}
+h2{margin:0; font-size:18px}
+p{margin:0 0 10px 0}
+.muted{color: var(--muted)}
+.tiny{font-size:12px}
+
+.footerNote{margin-top:12px; text-align:center; font-size:12px}
+
+.gridButtons{display:grid; gap:12px; margin-top:14px}
+@media(min-width:650px){
+  .gridButtons{grid-template-columns:repeat(3,1fr)}
+}
+
+.bigBtn{
+  width:100%;
+  display:flex; gap:12px; align-items:center;
+  padding:14px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+  color: var(--text);
+  cursor:pointer;
+  transition: transform .08s ease, border-color .2s ease;
+}
+.bigBtn:active{transform: scale(.99)}
+.bigBtn:hover{border-color: rgba(255,255,255,.16)}
+.bigEmoji{font-size:28px}
+.bigLabel{display:block; font-weight:800}
+.bigHint{display:block; font-size:12px; color: var(--muted)}
+
+.miniRow{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px}
+
+.pill{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:8px 10px;
+  border-radius:999px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.03);
+  font-size:12px;
+}
+
+.rowBetween{display:flex; justify-content:space-between; align-items:center; gap:12px}
+.textBtn{
+  background: transparent; border:0; color: var(--muted);
+  cursor:pointer; font-weight:700;
+}
+.textBtn:hover{color: var(--text)}
+
+.iconBtn{
+  width:44px; height:44px;
+  border-radius:14px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.03);
+  color: var(--text);
+  cursor:pointer;
+}
+
+.form{margin-top:12px; display:grid; gap:12px}
+.field{display:grid; gap:6px}
+.labelText{font-weight:800}
+.help{font-size:12px; color: var(--muted)}
+input[type="number"]{
+  width:100%;
+  padding:14px 12px;
+  border-radius:14px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,.25);
+  color: var(--text);
+  font-size:16px;
+}
+
+.actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:4px}
+
+.primaryBtn, .ghostBtn, .dangerBtn{
+  border-radius: 14px;
+  padding:12px 14px;
+  border: 1px solid var(--border);
+  cursor:pointer;
+  font-weight:900;
+  letter-spacing:.2px;
+}
+.primaryBtn{
+  background: linear-gradient(135deg, rgba(124,92,255,.85), rgba(45,212,191,.55));
+  color: #0a0a0d;
+  border-color: rgba(255,255,255,.12);
+}
+.ghostBtn{
+  background: rgba(255,255,255,.03);
+  color: var(--text);
+}
+.dangerBtn{
+  background: rgba(255,59,107,.15);
+  border-color: rgba(255,59,107,.35);
+  color: var(--text);
+}
+.primaryBtn:active, .ghostBtn:active, .dangerBtn:active{transform: scale(.99)}
+
+.statusBar{display:flex; gap:8px; flex-wrap:wrap; margin:12px 0}
+
+.boardWrap{margin-top:10px}
+.board{
+  display:grid;
+  gap:10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+@media(min-width:520px){
+  .board{grid-template-columns: repeat(6, minmax(0, 1fr))}
+}
+
+.tile{
+  height:72px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.18)), var(--tile);
+  display:grid; place-items:center;
+  cursor:pointer;
+  position:relative;
+  user-select:none;
+  overflow:hidden;
+  transition: transform .08s ease, border-color .2s ease, filter .2s ease;
+}
+.tile:active{transform: scale(.99)}
+.tile:hover{border-color: rgba(255,255,255,.18)}
+
+.tile .face{
+  font-weight:900;
+  font-size:14px;
+  text-align:center;
+  padding:8px;
+  line-height:1.1;
+}
+
+.tile.revealed{
+  cursor:default;
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.22)), var(--tile2);
+}
+
+.controls{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px}
+
+.modalBackdrop{
+  position:fixed; inset:0;
+  background: rgba(0,0,0,.55);
+  display:grid; place-items:center;
+  padding:16px;
+  z-index: 50;
+}
+.modal{
+  width:min(560px, 100%);
+  background: var(--card);
+  border:1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding:16px;
+}
+.setting{
+  margin-top:14px;
+  display:flex; justify-content:space-between; align-items:center; gap:14px;
+}
+.settingTitle{font-weight:900}
+.divider{height:1px; background: var(--border); margin:16px 0}
+
+.switch{position:relative; width:54px; height:32px; display:inline-block}
+.switch input{display:none}
+.slider{
+  position:absolute; inset:0;
+  background: rgba(255,255,255,.08);
+  border:1px solid var(--border);
+  border-radius:999px;
+  cursor:pointer;
+  transition:.2s;
+}
+.slider:before{
+  content:"";
+  position:absolute;
+  width:26px; height:26px;
+  left:3px; top:2px;
+  background: rgba(255,255,255,.85);
+  border-radius:999px;
+  transition:.2s;
+}
+.switch input:checked + .slider{
+  background: rgba(124,92,255,.45);
+  border-color: rgba(124,92,255,.55);
+}
+.switch input:checked + .slider:before{
+  transform: translateX(22px);
+}
+
+.overlay{
+  position:fixed; inset:0;
+  background: rgba(0,0,0,.65);
+  display:grid; place-items:center;
+  z-index: 60;
+  padding:16px;
+}
+.overlayCard{
+  width:min(460px, 100%);
+  background: var(--card);
+  border:1px solid var(--border);
+  border-radius: var(--radius);
+  padding:16px;
+  box-shadow: var(--shadow);
+  text-align:center;
+}
+.overlayTitle{font-weight:1000; font-size:18px; margin-bottom:8px}
+.overlayText{color: var(--muted); margin-bottom:12px; line-height:1.35}
+.overlayActions{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
+
+.toast{
+  position:fixed;
+  left:50%; bottom:22px;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,.7);
+  border:1px solid var(--border);
+  padding:10px 12px;
+  border-radius:999px;
+  font-size:13px;
+  z-index: 80;
+  backdrop-filter: blur(8px);
+}
+
+/* UNHINGED THEME */
+body.unhinged{
+  background: radial-gradient(1200px 800px at 30% 0%, rgba(255,59,107,.17), transparent 60%),
+              radial-gradient(1200px 800px at 95% 18%, rgba(124,92,255,.20), transparent 60%),
+              #07070a;
+}
+body.unhinged .logo{
+  background: linear-gradient(135deg, rgba(255,59,107,.22), rgba(124,92,255,.22));
+}
+body.unhinged .primaryBtn{
+  background: linear-gradient(135deg, rgba(255,59,107,.75), rgba(124,92,255,.55));
+  color:#0a0a0d;
+}
+body.unhinged .tile{
+  animation: jitter 6s infinite;
+}
+body.unhinged .tile.revealed{
+  filter: saturate(1.15) contrast(1.05);
+}
+@keyframes jitter{
+  0%, 95%, 100%{transform: translate(0,0)}
+  96%{transform: translate(-1px, 0px)}
+  97%{transform: translate(1px, 1px)}
+  98%{transform: translate(0px, -1px)}
+  99%{transform: translate(1px, 0px)}
+}
