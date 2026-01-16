@@ -1,4 +1,4 @@
-/* Schoolyard Shuffle - static PWA, teen-voice, three modes, Unhinged toggle */
+/* Schoolyard Shuffle - static PWA, teen-voice, three modes, smooth overlays */
 
 const $ = (id) => document.getElementById(id);
 
@@ -12,7 +12,6 @@ const ui = {
   subtitle: $("subtitle"),
   pwaStatus: $("pwaStatus"),
 
-  // Home buttons (delegated)
   // Setup
   setupTitle: $("setupTitle"),
   setupDesc: $("setupDesc"),
@@ -23,7 +22,6 @@ const ui = {
   setupForm: $("setupForm"),
   randomizeBtn: $("randomizeBtn"),
   backHomeBtn: $("backHomeBtn"),
-  unhingedNote: $("unhingedNote"),
 
   // Game
   gameTitle: $("gameTitle"),
@@ -40,17 +38,13 @@ const ui = {
   settingsBackdrop: $("settingsBackdrop"),
   openSettingsBtn: $("openSettingsBtn"),
   closeSettingsBtn: $("closeSettingsBtn"),
-  unhingedToggle: $("unhingedToggle"),
+  unhingedToggle: $("unhingedToggle"), // UI label might say "Extra chaos" now—id stays the same
   passPhoneToggle: $("passPhoneToggle"),
   soundToggle: $("soundToggle"),
-  openUnhingedConfirmBtn: $("openUnhingedConfirmBtn"),
 
-  // Overlays
+  // Pass-the-phone overlay
   passOverlay: $("passOverlay"),
   nextPlayerBtn: $("nextPlayerBtn"),
-  unhingedOverlay: $("unhingedOverlay"),
-  acceptUnhingedBtn: $("acceptUnhingedBtn"),
-  declineUnhingedBtn: $("declineUnhingedBtn"),
 
   // Toast
   toast: $("toast"),
@@ -127,12 +121,20 @@ const state = {
   tiles: [],
   revealedCount: 0,
 
+  // Overlay state prevents re-show glitches
+  overlay: {
+    passOpen: false,
+    suppressUntil: 0, // timestamp to ignore immediate re-open after close
+  },
+
   settings: {
     unhinged: false,
     passPhone: true,
     sound: false,
   },
 };
+
+/* ------------------------------ helpers ------------------------------ */
 
 function showScreen(name) {
   Object.values(screens).forEach((s) => s.classList.remove("active"));
@@ -161,11 +163,26 @@ function shuffle(arr) {
   return a;
 }
 
+function modeLabel(mode) {
+  const meta = MODE_META[mode];
+  return `${meta.emoji} ${meta.title}`;
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+/* ------------------------------ theme/settings ------------------------------ */
+
 function setTheme() {
   document.body.classList.toggle("unhinged", state.settings.unhinged);
-  ui.unhingedNote.hidden = !state.settings.unhinged;
   ui.subtitle.textContent = state.settings.unhinged
-    ? "Random. Fair. Unhinged."
+    ? "Random. Fair. Extra chaos."
     : "Settle it with tiles.";
 }
 
@@ -181,7 +198,9 @@ function loadSettings() {
     if (typeof s?.unhinged === "boolean") state.settings.unhinged = s.unhinged;
     if (typeof s?.passPhone === "boolean") state.settings.passPhone = s.passPhone;
     if (typeof s?.sound === "boolean") state.settings.sound = s.sound;
-  } catch { /* ignore */ }
+  } catch {
+    // ignore
+  }
 }
 
 function syncSettingsUI() {
@@ -191,36 +210,32 @@ function syncSettingsUI() {
   setTheme();
 }
 
-function openSettings() {
-  ui.settingsBackdrop.hidden = false;
+/* ------------------------------ overlays (smooth + reliable) ------------------------------ */
+
+function openPassOverlay() {
+  // Don’t open if disabled or already open
+  if (!state.settings.passPhone) return;
+  if (state.overlay.passOpen) return;
+
+  // Prevent "close then instantly re-open" due to rapid taps/cached events
+  if (Date.now() < state.overlay.suppressUntil) return;
+
+  state.overlay.passOpen = true;
+
+  ui.passOverlay.hidden = false;
+  ui.passOverlay.style.display = "grid"; // ensure visible
 }
 
-function closeSettings() {
-  ui.settingsBackdrop.hidden = true;
+function closePassOverlay() {
+  state.overlay.passOpen = false;
+  state.overlay.suppressUntil = Date.now() + 250; // small debounce window
+
+  // Hide in the most compatible way: attribute + display
+  ui.passOverlay.hidden = true;
+  ui.passOverlay.style.display = "none";
 }
 
-function openUnhingedConfirm() {
-  ui.unhingedOverlay.hidden = false;
-}
-function closeUnhingedConfirm() {
-  ui.unhingedOverlay.hidden = true;
-}
-
-function maybeShowTensionNote() {
-  const remaining = state.tiles.length - state.revealedCount;
-  if (!state.settings.unhinged) {
-    ui.tensionNote.textContent = "";
-    return;
-  }
-  if (remaining === 2) ui.tensionNote.textContent = "It’s about to be personal.";
-  else if (remaining === 1) ui.tensionNote.textContent = "One tile left. Everyone breathe.";
-  else ui.tensionNote.textContent = "";
-}
-
-function modeLabel(mode) {
-  const meta = MODE_META[mode];
-  return `${meta.emoji} ${meta.title}`;
-}
+/* ------------------------------ tiles/game logic ------------------------------ */
 
 function setupScreenForMode(mode) {
   const meta = MODE_META[mode];
@@ -230,13 +245,8 @@ function setupScreenForMode(mode) {
 
   ui.teamsField.hidden = !meta.needsTeams;
 
-  // tweak defaults a bit by mode
-  if (mode === "teams") {
-    ui.participantsInput.value = String(state.participants || 10);
-    ui.teamsInput.value = String(state.teams || 2);
-  } else {
-    ui.participantsInput.value = String(state.participants || 10);
-  }
+  ui.participantsInput.value = String(state.participants || 10);
+  if (mode === "teams") ui.teamsInput.value = String(state.teams || 2);
 }
 
 function buildTiles() {
@@ -248,52 +258,44 @@ function buildTiles() {
   if (mode === "teams") {
     const t = state.teams;
 
-    // distribute as evenly as possible
     const base = Math.floor(n / t);
     const rem = n % t;
 
-    const teams = [];
-    for (let i = 0; i < t; i++) {
-      const count = base + (i < rem ? 1 : 0);
-      teams.push({ teamIndex: i, count });
-    }
-
     const chosenPalette = TEAM_PALETTE.slice(0, Math.min(t, TEAM_PALETTE.length));
     const tiles = [];
-    teams.forEach(({ teamIndex, count }) => {
-      const team = chosenPalette[teamIndex] || { name: `Team ${teamIndex + 1}`, color: "#ffffff" };
+
+    for (let teamIndex = 0; teamIndex < t; teamIndex++) {
+      const count = base + (teamIndex < rem ? 1 : 0);
+      const team = chosenPalette[teamIndex] || {
+        name: `Team ${teamIndex + 1}`,
+        color: "#ffffff",
+      };
+
       for (let i = 0; i < count; i++) {
         tiles.push({
           kind: "team",
           revealed: false,
-          teamIndex,
           label: team.name,
           color: team.color,
         });
       }
-    });
+    }
 
     state.tiles = shuffle(tiles);
     return;
   }
 
   if (mode === "loser") {
-    // one loser tile, rest safe
     const tiles = [];
-    for (let i = 0; i < n - 1; i++) {
-      tiles.push({ kind: "safe", revealed: false });
-    }
+    for (let i = 0; i < n - 1; i++) tiles.push({ kind: "safe", revealed: false });
     tiles.push({ kind: "loser", revealed: false });
     state.tiles = shuffle(tiles);
     return;
   }
 
   if (mode === "winner") {
-    // one winner tile, rest not-winner
     const tiles = [];
-    for (let i = 0; i < n - 1; i++) {
-      tiles.push({ kind: "notWinner", revealed: false });
-    }
+    for (let i = 0; i < n - 1; i++) tiles.push({ kind: "notWinner", revealed: false });
     tiles.push({ kind: "winner", revealed: false });
     state.tiles = shuffle(tiles);
     return;
@@ -330,32 +332,26 @@ function revealTextFor(tile) {
     };
   }
 
-  if (state.mode === "winner") {
-    if (tile.kind === "winner") {
-      return {
-        top: "👑 WINNER",
-        sub: unhinged
-          ? UNHINGED_WINNER_LINES[Math.floor(Math.random() * UNHINGED_WINNER_LINES.length)]
-          : "Big W energy.",
-        accent: "#facc15",
-      };
-    }
+  // winner mode
+  if (tile.kind === "winner") {
     return {
-      top: "😎 NOT YOU",
+      top: "👑 WINNER",
       sub: unhinged
-        ? "Better luck. Don’t rage quit."
-        : "Try again.",
-      accent: "#60a5fa",
+        ? UNHINGED_WINNER_LINES[Math.floor(Math.random() * UNHINGED_WINNER_LINES.length)]
+        : "Big W energy.",
+      accent: "#facc15",
     };
   }
-
-  return { top: "???", sub: "", accent: "#ffffff" };
+  return {
+    top: "😎 NOT YOU",
+    sub: unhinged ? "Better luck. Don’t rage quit." : "Try again.",
+    accent: "#60a5fa",
+  };
 }
 
 function playSound(type) {
   if (!state.settings.sound) return;
 
-  // Tiny WebAudio beeps (no asset files needed)
   const ctx = playSound._ctx || (playSound._ctx = new (window.AudioContext || window.webkitAudioContext)());
   const o = ctx.createOscillator();
   const g = ctx.createGain();
@@ -382,21 +378,29 @@ function playSound(type) {
   o.stop(now + dur + 0.02);
 }
 
+function maybeShowTensionNote() {
+  if (!state.settings.unhinged) {
+    ui.tensionNote.textContent = "";
+    return;
+  }
+  const remaining = state.tiles.length - state.revealedCount;
+  if (remaining === 2) ui.tensionNote.textContent = "It’s about to be personal.";
+  else if (remaining === 1) ui.tensionNote.textContent = "One tile left. Everyone breathe.";
+  else ui.tensionNote.textContent = "";
+}
+
 function updateGameHeader() {
   ui.modePill.textContent = modeLabel(state.mode);
   ui.countPill.textContent = `${state.revealedCount} / ${state.tiles.length} flipped`;
 
-  const meta = MODE_META[state.mode];
-  ui.gameTitle.textContent = meta.title;
+  ui.gameTitle.textContent = MODE_META[state.mode].title;
 
   if (state.mode === "teams") {
     ui.gameSub.textContent = state.settings.unhinged
       ? "Flip a tile. Accept your destiny."
       : "Flip a tile to find your team.";
   } else if (state.mode === "loser") {
-    ui.gameSub.textContent = state.settings.unhinged
-      ? "Flip & suffer."
-      : "Flip until someone takes the L.";
+    ui.gameSub.textContent = state.settings.unhinged ? "Flip & suffer." : "Flip until someone takes the L.";
   } else {
     ui.gameSub.textContent = state.settings.unhinged
       ? "Flip until the prophecy is fulfilled."
@@ -419,12 +423,9 @@ function renderBoard() {
     const face = document.createElement("div");
     face.className = "face";
     face.textContent = "TAP";
-
     btn.appendChild(face);
 
-    if (tile.revealed) {
-      applyReveal(btn, tile);
-    }
+    if (tile.revealed) applyReveal(btn, tile);
 
     ui.board.appendChild(btn);
   });
@@ -442,22 +443,15 @@ function applyReveal(tileEl, tile) {
   face.innerHTML = `<div style="font-size:13px;font-weight:1000">${escapeHtml(txt.top)}</div>
                     <div style="font-size:11px;opacity:.85;margin-top:4px">${escapeHtml(txt.sub)}</div>`;
 
-  // sound
   if (state.mode === "loser" && tile.kind === "loser") playSound("loser");
   else if (state.mode === "winner" && tile.kind === "winner") playSound("winner");
   else playSound("flip");
 }
 
-function escapeHtml(s) {
-  return String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
+function onBoardClick(e) {
+  // If pass overlay is open, block tile flips entirely
+  if (state.overlay.passOpen) return;
 
-function onTileClick(e) {
   const btn = e.target.closest(".tile");
   if (!btn) return;
 
@@ -465,17 +459,18 @@ function onTileClick(e) {
   const tile = state.tiles[idx];
   if (!tile || tile.revealed) return;
 
+  // Reveal
   tile.revealed = true;
   state.revealedCount += 1;
   applyReveal(btn, tile);
   updateGameHeader();
 
-  // Pass-the-phone overlay
+  // Show pass overlay after each reveal (except last tile)
   if (state.settings.passPhone && state.revealedCount < state.tiles.length) {
-    ui.passOverlay.hidden = false;
+    openPassOverlay();
   }
 
-  // Finish states
+  // Toasts
   if (state.mode === "loser" && tile.kind === "loser") {
     toast(state.settings.unhinged ? "CERTIFIED L. RIP." : "Certified L.");
   }
@@ -484,30 +479,40 @@ function onTileClick(e) {
   }
 }
 
+function applySetupForm() {
+  const p = clampInt(ui.participantsInput.value, 2, 200, 10);
+  state.participants = p;
+
+  if (state.mode === "teams") {
+    const t = clampInt(ui.teamsInput.value, 2, 20, 2);
+    state.teams = Math.min(t, p);
+  }
+}
+
 function startSetup(mode) {
   state.mode = mode;
   setupScreenForMode(mode);
-  ui.unhingedNote.hidden = !state.settings.unhinged;
   showScreen("setup");
 }
 
 function startGameFromSetup() {
+  closePassOverlay(); // ensure no overlay leaks between screens
   buildTiles();
   updateGameHeader();
   renderBoard();
-  ui.board.removeEventListener("click", onTileClick);
-  ui.board.addEventListener("click", onTileClick);
   showScreen("game");
 }
 
-function randomizeNumbers() {
-  // Teen-friendly randomness, but bounded.
-  const p = clampInt(
-    Math.floor(6 + Math.random() * 25),
-    2, 200,
-    10
-  );
+function runItBack() {
+  closePassOverlay();
+  buildTiles();
+  updateGameHeader();
+  renderBoard();
+  toast(state.settings.unhinged ? "Chaos reloaded." : "Shuffled.");
+}
 
+function randomizeNumbers() {
+  const p = clampInt(Math.floor(6 + Math.random() * 25), 2, 200, 10);
   ui.participantsInput.value = String(p);
 
   if (state.mode === "teams") {
@@ -519,41 +524,30 @@ function randomizeNumbers() {
   toast("Numbers shuffled.");
 }
 
-function applySetupForm() {
-  const p = clampInt(ui.participantsInput.value, 2, 200, 10);
-  state.participants = p;
+/* ------------------------------ settings modal ------------------------------ */
 
-  if (state.mode === "teams") {
-    const t = clampInt(ui.teamsInput.value, 2, 20, 2);
-    state.teams = Math.min(t, p); // no more teams than players
-  }
+function openSettings() {
+  ui.settingsBackdrop.hidden = false;
+}
+function closeSettings() {
+  ui.settingsBackdrop.hidden = true;
 }
 
-function runItBack() {
-  buildTiles();
-  updateGameHeader();
-  renderBoard();
-  toast(state.settings.unhinged ? "Chaos reloaded." : "Shuffled.");
-}
+/* ------------------------------ PWA ------------------------------ */
 
 function initPwa() {
-  // Service worker
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./sw.js").catch(() => {
-        // ignore
-      });
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
     });
   }
 
-  // Install prompt hint (best-effort)
   let deferredPrompt = null;
   window.addEventListener("beforeinstallprompt", (e) => {
     deferredPrompt = e;
     ui.pwaStatus.textContent = "📲 Installable PWA (tap ⋮ → Add to Home screen)";
   });
 
-  // If not supported, still show a helpful hint
   setTimeout(() => {
     if (!deferredPrompt) {
       ui.pwaStatus.textContent = "📱 Add to Home Screen for the “app” vibe";
@@ -561,18 +555,21 @@ function initPwa() {
   }, 1200);
 }
 
+/* ------------------------------ wiring ------------------------------ */
+
 function wireEvents() {
-  // Home mode selection (event delegation)
+  // Home mode selection
   screens.home.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-mode]");
     if (!btn) return;
-    const mode = btn.dataset.mode;
-    startSetup(mode);
+    startSetup(btn.dataset.mode);
   });
 
-  ui.backHomeBtn.addEventListener("click", () => showScreen("home"));
-  ui.backSetupBtn.addEventListener("click", () => showScreen("setup"));
-  ui.newSetupBtn.addEventListener("click", () => showScreen("setup"));
+  // Setup nav
+  ui.backHomeBtn.addEventListener("click", () => {
+    closePassOverlay();
+    showScreen("home");
+  });
 
   ui.randomizeBtn.addEventListener("click", randomizeNumbers);
 
@@ -582,7 +579,21 @@ function wireEvents() {
     startGameFromSetup();
   });
 
+  // Game nav
+  ui.backSetupBtn.addEventListener("click", () => {
+    closePassOverlay();
+    showScreen("setup");
+  });
+
+  ui.newSetupBtn.addEventListener("click", () => {
+    closePassOverlay();
+    showScreen("setup");
+  });
+
   ui.playAgainBtn.addEventListener("click", runItBack);
+
+  // Board click (single handler, stable)
+  ui.board.addEventListener("click", onBoardClick);
 
   // Settings modal
   ui.openSettingsBtn.addEventListener("click", openSettings);
@@ -594,6 +605,7 @@ function wireEvents() {
   ui.passPhoneToggle.addEventListener("change", () => {
     state.settings.passPhone = ui.passPhoneToggle.checked;
     saveSettings();
+    if (!state.settings.passPhone) closePassOverlay();
   });
 
   ui.soundToggle.addEventListener("change", () => {
@@ -602,53 +614,44 @@ function wireEvents() {
     toast(state.settings.sound ? "Sound on." : "Sound off.");
   });
 
+  // Direct toggle, no confirmation, no overlay
   ui.unhingedToggle.addEventListener("change", () => {
-    // We route enabling through confirm overlay
-    if (ui.unhingedToggle.checked && !state.settings.unhinged) {
-      ui.unhingedToggle.checked = false;
-      openUnhingedConfirm();
-      return;
-    }
     state.settings.unhinged = ui.unhingedToggle.checked;
     setTheme();
     saveSettings();
+    toast(state.settings.unhinged ? "Extra chaos: ON 😈" : "Extra chaos: OFF 😇");
+    updateGameHeader(); // if already in game, update text/tension note
   });
 
-  ui.openUnhingedConfirmBtn.addEventListener("click", openUnhingedConfirm);
-  ui.acceptUnhingedBtn.addEventListener("click", () => {
-    state.settings.unhinged = true;
-    syncSettingsUI();
-    saveSettings();
-    closeUnhingedConfirm();
-    toast("Unhinged Mode: ON 😈");
-  });
-  ui.declineUnhingedBtn.addEventListener("click", () => {
-    state.settings.unhinged = false;
-    syncSettingsUI();
-    saveSettings();
-    closeUnhingedConfirm();
-    toast("Okay. Peace restored.");
+  // Pass overlay close: button
+  ui.nextPlayerBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    closePassOverlay();
   });
 
-  // Pass overlay
-  ui.nextPlayerBtn.addEventListener("click", () => {
-    ui.passOverlay.hidden = true;
-  });
-
-  // Close overlays by clicking outside card (optional)
+  // Pass overlay close: tap outside the card
   ui.passOverlay.addEventListener("click", (e) => {
-    if (e.target === ui.passOverlay) ui.passOverlay.hidden = true;
+    if (e.target === ui.passOverlay) closePassOverlay();
   });
-  ui.unhingedOverlay.addEventListener("click", (e) => {
-    if (e.target === ui.unhingedOverlay) closeUnhingedConfirm();
+
+  // Safety: close overlay on escape
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeSettings();
+      closePassOverlay();
+    }
   });
 }
+
+/* ------------------------------ init ------------------------------ */
 
 function init() {
   loadSettings();
   syncSettingsUI();
   initPwa();
   wireEvents();
+  closePassOverlay(); // enforce clean start state
   showScreen("home");
 }
 
